@@ -40,3 +40,6 @@ A simple web application that allows users to compare vehicle data from two diff
 - Make sure the column names in your CSV files match those expected by the application.
 - The entire application is in a single HTML file, making it easy to share and use without additional setup.
 
+- ![image](https://github.com/mattgrilli/lpr-compare/assets/20561107/30a6da33-7e24-4aea-a12e-59e20f9cca42)
+
+
