@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Vehicle Data Comparison</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            margin: 20px;
+        }
+        table {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        li {
+            margin-bottom: 8px;
+            background-color: #f9f9f9;
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 10;
+        }
+        .scrollable-table {
+            overflow-y: auto;
+            max-height: 500px;
+            resize: vertical;
+        }
+        .scrollable-list {
+            overflow-y: auto;
+            max-height: 500px;
+            resize: vertical;
+        }
+        .table-hover tbody tr:hover {
+            background-color: #f2f2f2;
+        }
+        li:hover {
+            background-color: #e9ecef;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="my-4 text-white bg-primary p-3">Vehicle Data Comparison</h1>
+        <div class="card mb-4">
+            <div class="card-header">Upload Data</div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="csvInput" class="form-label">Upload Vehicle Data (CSV):</label>
+                    <input type="file" id="csvInput" accept=".csv" class="form-control mb-4">
+                </div>
+                <div class="mb-3">
+                    <label for="lprInput" class="form-label">Upload LPR Data (CSV):</label>
+                    <input type="file" id="lprInput" accept=".csv" class="form-control mb-4">
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Matches <span class="badge badge-success" id="matchesCount">0</span></span>
+                <button onclick="exportResults('matched')" class="btn btn-primary">Export Matched</button>
+            </div>
+            <div class="card-body scrollable-list">
+                <ul id="matchesList"></ul>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Unmatched Plates <span class="badge badge-danger" id="unmatchedCount">0</span></span>
+                <button onclick="exportResults('unmatched')" class="btn btn-secondary">Export Unmatched</button>
+            </div>
+            <div class="card-body scrollable-list">
+                <ul id="unmatchedList"></ul>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Vehicle Table <span class="badge badge-info" id="vehicleCount">0</span></span>
+            </div>
+            <div class="card-body scrollable-table">
+                <table id="vehicleTable" class="table table-bordered table-hover table-striped">
+                    <thead class="thead-light sticky-header">
+                        <tr>
+                            <th onclick="sortTable(0)">Account</th>
+                            <th onclick="sortTable(1)">Owner Name</th>
+                            <th onclick="sortTable(2)">Property Address</th>
+                            <th onclick="sortTable(3)">License Plates</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.getElementById('csvInput').addEventListener('change', handleCSVUpload);
+        document.getElementById('lprInput').addEventListener('change', handleLPRUpload);
+
+        let vehicleData = [];
+        let lprData = [];
+        let matchedResults = [];
+        let unmatchedResults = [];
+
+        function handleCSVUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    vehicleData = parseCSV(e.target.result);
+                    populateTable(vehicleData);
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function handleLPRUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    lprData = parseLPRCSV(e.target.result);
+                    comparePlates(vehicleData, lprData);
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function parseCSV(data) {
+            const rows = data.split('\n').map(row => row.split(','));
+            const headers = rows.shift();
+            return rows.map(row => {
+                let parsedRow = Object.fromEntries(row.map((val, i) => [headers[i], val.trim()]));
+
+                // Collect license plates into a list
+                parsedRow['plates'] = [
+                    parsedRow['Vehicle(s) Information - Vehicle 1: License Plate #'],
+                    parsedRow['Vehicle(s) Information - Vehicle 2: License Plate #'],
+                    parsedRow['Vehicle(s) Information - Vehicle 3: License Plate #'],
+                    parsedRow['Vehicle(s) Information - Vehicle 4: License Plate #']
+                ].filter(plate => plate && plate.trim() !== "");
+
+                return parsedRow;
+            });
+        }
+
+        function parseLPRCSV(data) {
+            const rows = data.split('\n').map(row => row.split(','));
+            const headers = rows.shift();
+            return rows.map(row => {
+                let parsedRow = Object.fromEntries(row.map((val, i) => [headers[i], val.trim()]));
+                return {
+                    plate: parsedRow['plate'],
+                    timestamp: parsedRow['date']
+                };
+            });
+        }
+
+        function populateTable(data) {
+            const tbody = document.getElementById('vehicleTable').getElementsByTagName('tbody')[0];
+            tbody.innerHTML = '';
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${row['Account']}</td><td>${row['OwnerName']}</td><td>${row['PropAddress']}</td><td>${row['plates'].join(', ')}</td>`;
+                tbody.appendChild(tr);
+            });
+
+            // Update the vehicle count badge
+            document.getElementById('vehicleCount').innerText = data.length;
+        }
+
+        function comparePlates(vehicleData, lprData) {
+            const matchesList = document.getElementById('matchesList');
+            const unmatchedList = document.getElementById('unmatchedList');
+            const matchesCount = document.getElementById('matchesCount');
+            const unmatchedCount = document.getElementById('unmatchedCount');
+            
+            matchesList.innerHTML = '';
+            unmatchedList.innerHTML = '';
+
+            const matchedPlates = new Set();
+            matchedResults = [];
+            unmatchedResults = [];
+
+            vehicleData.forEach(row => {
+                row['plates'].forEach(plate => {
+                    const cleanPlate = plate.trim();
+                    const match = lprData.find(row => row['plate'] === cleanPlate);
+
+                    if (match) {
+                        matchedPlates.add(cleanPlate);
+                        const li = document.createElement('li');
+                        li.textContent = `Account: ${row['Account']}, Owner: ${row['OwnerName']}, Address: ${row['PropAddress']}, Plate: ${cleanPlate}`;
+                        li.style.backgroundColor = '#d4edda'; // Highlight matches
+                        matchesList.appendChild(li);
+                        matchedResults.push({ Account: row['Account'], OwnerName: row['OwnerName'], Address: row['PropAddress'], Plate: cleanPlate });
+                    }
+                });
+            });
+
+            lprData.forEach(row => {
+                const plate = row['plate']?.trim();
+                if (plate && !matchedPlates.has(plate)) {
+                    const li = document.createElement('li');
+                    li.textContent = `Unmatched Plate: ${plate}, Timestamp: ${row['timestamp']}`;
+                    li.style.backgroundColor = '#f8d7da'; // Highlight unmatched
+                    unmatchedList.appendChild(li);
+                    unmatchedResults.push({ Plate: plate, Timestamp: row['timestamp'] });
+                }
+            });
+
+            matchesCount.textContent = matchedResults.length;
+            unmatchedCount.textContent = unmatchedResults.length;
+        }
+
+        function sortTable(columnIndex) {
+            const table = document.getElementById('vehicleTable');
+            const rows = Array.from(table.tBodies[0].rows); // Only sort the body rows
+            let ascending = true; // You can toggle this based on user clicks for ascending/descending
+
+            // Determine the sort direction based on the header click
+            const th = table.tHead.rows[0].cells[columnIndex];
+            if (th.dataset.order === "asc") {
+                ascending = false;
+                th.dataset.order = "desc";
+            } else {
+                th.dataset.order = "asc";
+            }
+
+            const sortedRows = rows.sort((rowA, rowB) => {
+                const cellA = rowA.cells[columnIndex].textContent.toLowerCase();
+                const cellB = rowB.cells[columnIndex].textContent.toLowerCase();
+                
+                if (ascending) {
+                    return cellA.localeCompare(cellB);
+                } else {
+                    return cellB.localeCompare(cellA);
+                }
+            });
+
+            // Clear the table body and append sorted rows
+            const tbody = table.tBodies[0];
+            tbody.innerHTML = '';
+            sortedRows.forEach(row => tbody.appendChild(row));
+        }
+
+        function exportResults(type) {
+            let csvContent;
+            let rows;
+
+            if (type === 'matched') {
+                csvContent = 'Account,OwnerName,PropAddress,Plate\n';
+                rows = matchedResults;
+            } else if (type === 'unmatched') {
+                csvContent = 'Plate,Timestamp\n';
+                rows = unmatchedResults;
+            }
+
+            rows.forEach(row => {
+                const rowText = Object.values(row).map(value => `"${value}"`).join(',');
+                csvContent += rowText + '\n';
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${type}_results.csv`;
+            a.click();
+        }
+    </script>
+</body>
+</html>
