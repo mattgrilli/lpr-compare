@@ -17,7 +17,7 @@ A simple web application that allows users to compare vehicle data from two diff
 - A modern web browser (Google Chrome, Firefox, Edge, etc.)
 
 ### How to Use
-1. Download the `vehicle_data_comparison.html` file.
+1. Download the `LPR.html` file.
 2. Open the file in your web browser.
 3. Upload the CSV file containing vehicle data by clicking the "Upload Vehicle Data (CSV)" button.
 4. Upload the CSV file containing LPR data by clicking the "Upload LPR Data (CSV)" button.
